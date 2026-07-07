@@ -359,26 +359,26 @@ if file1 and file2 and file3:
         st.error(f"ファイルの読み込みに失敗しました: {e}")
         st.stop()
         
-    # タブの作成
-    tab1, tab2 = st.tabs(["1: 最適化判定（単月）", "2: A/Bテスト（月別比較）"])
+    # Streamlit特有の「タブ内容が侵食するバグ」を根本から回避するため、タブを廃止してラジオボタンによる表示切り替えに変更
+    mode = st.radio(
+        "表示モードを選択:",
+        ["1: 最適化判定（単月）", "2: A/Bテスト（月別比較）"],
+        horizontal=True
+    )
     
-    # Streamlitのタブ侵食バグを防ぐための強力なプレースホルダー分離
-    with tab1:
-        ph1 = st.empty()
-    with tab2:
-        ph2 = st.empty()
-        
-    with ph1.container():
+    st.markdown("---") # 区切り線
+    
+    if mode == "1: 最適化判定（単月）":
         try:
             render_tab1(bytes1, bytes2, bytes3, sheets1, sheets2, sheets3)
         except Exception as e:
-            st.error(f"タブ1の処理中にエラーが発生しました: {str(e)}")
+            st.error(f"最適化判定の処理中にエラーが発生しました: {str(e)}")
             
-    with ph2.container():
+    elif mode == "2: A/Bテスト（月別比較）":
         try:
             render_tab2(bytes1, bytes2, bytes3, sheets1, sheets2, sheets3)
         except Exception as e:
-            st.error(f"タブ2の処理中にエラーが発生しました: {str(e)}")
+            st.error(f"A/Bテストの処理中にエラーが発生しました: {str(e)}")
 
 else:
     st.info("左側のサイドバーから3つのExcelファイルをアップロードしてください。")
