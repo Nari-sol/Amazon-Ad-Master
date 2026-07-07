@@ -3,6 +3,16 @@ import pandas as pd
 import numpy as np
 import io
 
+@st.cache_data(show_spinner=False)
+def get_sheet_names(file_bytes):
+    return pd.ExcelFile(io.BytesIO(file_bytes)).sheet_names
+
+@st.cache_data(show_spinner=False)
+def load_excel_sheet(file_bytes, sheet_name=0):
+    df = pd.read_excel(io.BytesIO(file_bytes), sheet_name=sheet_name)
+    df.columns = df.columns.astype(str).str.strip()
+    return df
+
 # ページ設定
 st.set_page_config(
     page_title="Amazon Ad Master",
@@ -11,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# プレミアムなカスタムCSS of the application
+# プレミアムなカスタムCSS
 st.markdown("""
     <style>
         /* タイトルスタイル */
@@ -73,16 +83,24 @@ file3 = st.sidebar.file_uploader("3: 商品マスター (Excel)", type=["xlsx", 
 # 3つのファイルが揃っているか確認
 if file1 and file2 and file3:
     try:
-        # Excelファイルの読み込み準備 (シート名取得のため ExcelFile オブジェクトを作成)
-        xl1 = pd.ExcelFile(file1)
-        xl2 = pd.ExcelFile(file2)
-        xl3 = pd.ExcelFile(file3)
+        # キャッシュを利用してファイルを読み込み
+        bytes1 = file1.getvalue()
+        bytes2 = file2.getvalue()
+        bytes3 = file3.getvalue()
         
-        # タブの作成
-        tab1, tab2 = st.tabs(["1: 最適化判定（単月）", "2: A/Bテスト（月別比較）"])
+        sheets1 = get_sheet_names(bytes1)
+        sheets2 = get_sheet_names(bytes2)
+        sheets3 = get_sheet_names(bytes3)
+    except Exception as e:
+        st.error(f"ファイルの読み込みに失敗しました: {e}")
+        st.stop()
         
-        # --- タブ1：最適化判定（単月） ---
-        with tab1:
+    # タブの作成
+    tab1, tab2 = st.tabs(["1: 最適化判定（単月）", "2: A/Bテスト（月別比較）"])
+    
+    # --- タブ1：最適化判定（単月） ---
+    with tab1:
+        try:
             with st.expander("判定ロジックの解説（マニュアル）"):
                 st.markdown("""
                 このツールは、以下のルールに基づいて広告の最適化判定を行っています。
@@ -100,31 +118,26 @@ if file1 and file2 and file3:
             st.markdown("### ⚙️ 単月分析 設定オプション")
             col_opt1, col_opt2 = st.columns(2)
             with col_opt1:
-                selected_sheet = st.selectbox("分析対象の月（シート）を選択", xl1.sheet_names, key="tab1_sheet")
+                selected_sheet = st.selectbox("分析対象の月（シート）を選択", sheets1, key="tab1_sheet")
             with col_opt2:
                 threshold = st.slider(
                     "「育成枠へ追加」の商品購入数閾値",
                     min_value=1,
                     max_value=50,
-                    value=5,
+                    value=20,
                     step=1,
                     key="tab1_threshold"
                 )
                 
             # 選択された共通シートがファイル2に存在するかチェック
-            if selected_sheet not in xl2.sheet_names:
+            if selected_sheet not in sheets2:
                 st.error(f"エラー: キャンペーン別広告レポートにシート「{selected_sheet}」が見つかりません。両方のファイルでシート名が一致しているか確認してください。")
             else:
-                # 選択されたシートの読み込み
-                df_asin = xl1.parse(selected_sheet)
-                df_campaign = xl2.parse(selected_sheet)
+                # 選択されたシートの読み込み (キャッシュ利用)
+                df_asin = load_excel_sheet(bytes1, selected_sheet)
+                df_campaign = load_excel_sheet(bytes2, selected_sheet)
                 # 商品マスターは常に最初のシートを読み込む
-                df_master = xl3.parse(xl3.sheet_names[0])
-                
-                # カラム名のクレンジング
-                df_asin.columns = df_asin.columns.astype(str).str.strip()
-                df_campaign.columns = df_campaign.columns.astype(str).str.strip()
-                df_master.columns = df_master.columns.astype(str).str.strip()
+                df_master = load_excel_sheet(bytes3, sheets3[0])
                 
                 # 必要なカラムの存在チェック
                 required_cols_asin = ["SKU", "合計費用 (JPY)", "商品購入数", "ACOS"]
@@ -262,25 +275,24 @@ if file1 and file2 and file3:
                         mime="text/csv",
                         key="dl_asin"
                     )
-        
-        # --- タブ2：A/Bテスト（月別比較） ---
-        with tab2:
+        except Exception as e:
+            st.error(f"タブ1の処理中にエラーが発生しました: {str(e)}")
+            
+    # --- タブ2：A/Bテスト（月別比較） ---
+    with tab2:
+        try:
             st.markdown('<div class="section-header">⚖️ A/Bテスト（月別比較）</div>', unsafe_allow_html=True)
             
             # シート選択（基準月と比較月）
             col_ab1, col_ab2 = st.columns(2)
             with col_ab1:
-                base_sheet = st.selectbox("基準月（比較元）を選択", xl1.sheet_names, key="ab_base")
+                base_sheet = st.selectbox("基準月（比較元）を選択", sheets1, key="ab_base")
             with col_ab2:
-                compare_sheet = st.selectbox("比較月（比較先）を選択", xl1.sheet_names, key="ab_compare")
+                compare_sheet = st.selectbox("比較月（比較先）を選択", sheets1, key="ab_compare")
                 
-            # データの読み込みと集計
-            df_base_raw = xl1.parse(base_sheet)
-            df_compare_raw = xl1.parse(compare_sheet)
-            
-            # カラム名のクレンジング
-            df_base_raw.columns = df_base_raw.columns.astype(str).str.strip()
-            df_compare_raw.columns = df_compare_raw.columns.astype(str).str.strip()
+            # データの読み込み (キャッシュ利用)
+            df_base_raw = load_excel_sheet(bytes1, base_sheet)
+            df_compare_raw = load_excel_sheet(bytes1, compare_sheet)
             
             # SKU単位での集計処理 (ASINも含める)
             def aggregate_sku(df):
@@ -352,8 +364,8 @@ if file1 and file2 and file3:
                 mime="text/csv",
                 key="dl_ab"
             )
-            
-    except Exception as e:
-        st.error(f"エラーが発生しました: {str(e)}")
+        except Exception as e:
+            st.error(f"タブ2の処理中にエラーが発生しました: {str(e)}")
+
 else:
     st.info("左側のサイドバーから3つのExcelファイルをアップロードしてください。")
