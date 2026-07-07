@@ -362,13 +362,19 @@ if file1 and file2 and file3:
     # タブの作成
     tab1, tab2 = st.tabs(["1: 最適化判定（単月）", "2: A/Bテスト（月別比較）"])
     
+    # Streamlitのタブ侵食バグを防ぐための強力なプレースホルダー分離
     with tab1:
+        ph1 = st.empty()
+    with tab2:
+        ph2 = st.empty()
+        
+    with ph1.container():
         try:
             render_tab1(bytes1, bytes2, bytes3, sheets1, sheets2, sheets3)
         except Exception as e:
             st.error(f"タブ1の処理中にエラーが発生しました: {str(e)}")
             
-    with tab2:
+    with ph2.container():
         try:
             render_tab2(bytes1, bytes2, bytes3, sheets1, sheets2, sheets3)
         except Exception as e:
