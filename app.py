@@ -100,9 +100,8 @@ if file1 and file2 and file3:
     
     # --- タブ1：最適化判定（単月） ---
     with tab1:
-        with st.container():
-            try:
-                with st.expander("判定ロジックの解説（マニュアル）"):
+        try:
+            with st.expander("判定ロジックの解説（マニュアル）"):
                 st.markdown("""
                 このツールは、以下のルールに基づいて広告の最適化判定を行っています。
 
@@ -281,9 +280,8 @@ if file1 and file2 and file3:
             
     # --- タブ2：A/Bテスト（月別比較） ---
     with tab2:
-        with st.container():
-            try:
-                st.markdown('<div class="section-header">⚖️ A/Bテスト（月別比較）</div>', unsafe_allow_html=True)
+        try:
+            st.markdown('<div class="section-header">⚖️ A/Bテスト（月別比較）</div>', unsafe_allow_html=True)
             
             # シート選択（基準月と比較月）
             col_ab1, col_ab2 = st.columns(2)
