@@ -100,8 +100,9 @@ if file1 and file2 and file3:
     
     # --- タブ1：最適化判定（単月） ---
     with tab1:
-        try:
-            with st.expander("判定ロジックの解説（マニュアル）"):
+        with st.container():
+            try:
+                with st.expander("判定ロジックの解説（マニュアル）"):
                 st.markdown("""
                 このツールは、以下のルールに基づいて広告の最適化判定を行っています。
 
@@ -134,10 +135,10 @@ if file1 and file2 and file3:
                 st.error(f"エラー: キャンペーン別広告レポートにシート「{selected_sheet}」が見つかりません。両方のファイルでシート名が一致しているか確認してください。")
             else:
                 # 選択されたシートの読み込み (キャッシュ利用)
-                df_asin = load_excel_sheet(bytes1, selected_sheet)
-                df_campaign = load_excel_sheet(bytes2, selected_sheet)
+                df_asin = load_excel_sheet(bytes1, selected_sheet).copy()
+                df_campaign = load_excel_sheet(bytes2, selected_sheet).copy()
                 # 商品マスターは常に最初のシートを読み込む
-                df_master = load_excel_sheet(bytes3, sheets3[0])
+                df_master = load_excel_sheet(bytes3, sheets3[0]).copy()
                 
                 # 必要なカラムの存在チェック
                 required_cols_asin = ["SKU", "合計費用 (JPY)", "商品購入数", "ACOS"]
@@ -280,8 +281,9 @@ if file1 and file2 and file3:
             
     # --- タブ2：A/Bテスト（月別比較） ---
     with tab2:
-        try:
-            st.markdown('<div class="section-header">⚖️ A/Bテスト（月別比較）</div>', unsafe_allow_html=True)
+        with st.container():
+            try:
+                st.markdown('<div class="section-header">⚖️ A/Bテスト（月別比較）</div>', unsafe_allow_html=True)
             
             # シート選択（基準月と比較月）
             col_ab1, col_ab2 = st.columns(2)
@@ -291,8 +293,8 @@ if file1 and file2 and file3:
                 compare_sheet = st.selectbox("比較月（比較先）を選択", sheets1, key="ab_compare")
                 
             # データの読み込み (キャッシュ利用)
-            df_base_raw = load_excel_sheet(bytes1, base_sheet)
-            df_compare_raw = load_excel_sheet(bytes1, compare_sheet)
+            df_base_raw = load_excel_sheet(bytes1, base_sheet).copy()
+            df_compare_raw = load_excel_sheet(bytes1, compare_sheet).copy()
             
             # SKU単位での集計処理 (ASINも含める)
             def aggregate_sku(df):
